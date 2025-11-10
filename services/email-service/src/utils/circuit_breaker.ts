@@ -22,6 +22,8 @@ const circuit_breaker = <T>(operation: () => Promise<T>, service: string) => {
   breaker.on("close", () => {
     console.log(`Circuit CLOSED - ${service} service restored`);
   });
+
+  return breaker;
 };
 
 export default circuit_breaker;

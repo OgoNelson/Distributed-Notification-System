@@ -1,5 +1,7 @@
 import amqplib from "amqplib";
+import type { SendMailOptions } from "nodemailer";
 import app from "../app.js";
+import circuit_breaker from "../utils/circuit_breaker.js";
 
 let connection: amqplib.ChannelModel | null = null;
 let channel: amqplib.Channel | null = null;
@@ -28,31 +30,95 @@ export const get_channel = async () => {
   return channel;
 };
 
-export const consume_queue = async <T>(
+export const consume_queue = async (
   routingKey: "email" | "push",
-  callback: (data: T) => Promise<void>
+  callback: (data: SendMailOptions) => Promise<void>
 ) => {
   const ch = await get_channel();
+
+  // Main exchange
   ch.assertExchange("notifications.direct", "direct", { durable: true });
-  await ch.assertQueue(`${routingKey}.queue`, {
+
+  // Dead letter exchange
+  ch.assertExchange("notifications.dlx", "direct", { durable: true });
+
+  // Create dead letter queue for failed messages - NO dead letter exchange here!
+  await ch.assertQueue(`${routingKey}.failed`, {
     durable: true,
     autoDelete: false,
   });
+
+  // Main queue with dead letter exchange configured
+  await ch.assertQueue(`${routingKey}.queue`, {
+    durable: true,
+    autoDelete: false,
+    deadLetterExchange: "notifications.dlx",
+    deadLetterRoutingKey: `${routingKey}.failed`,
+  });
+
+  // Bind DLQ to the exchange with a different routing key
+  await ch.bindQueue(
+    `${routingKey}.failed`,
+    "notifications.dlx",
+    `${routingKey}.failed`
+  );
+
   await ch.bindQueue(`${routingKey}.queue`, "notifications.direct", routingKey);
 
-  ch.consume(routingKey, async (msg: any) => {
+  ch.consume(`${routingKey}.queue`, async (msg: any) => {
     if (msg) {
+      console.log(`\n📨 Received message on ${routingKey}.queue`);
       try {
-        const data = JSON.parse(msg.content.toString());
-        // todo: fetch template here and insert data into it,
-        // todo: use circuit breaker pattern,
-        await callback(data);
+        const data = JSON.parse(msg.content.toString()) as {
+          template_code: string;
+          email: string;
+          priority: number;
+        };
+
+        // fetch template here
+        const template = await circuit_breaker(
+          async () => await fetch_template(data.template_code),
+          "Template"
+        ).fire();
+
+        // todo: fill template and extract body for html and subject
+        console.log(data, template);
+
+        await callback({
+          to: data.email,
+          // subject
+          from: "<hng.notification@gmail.com>",
+          html: "<p>something</p>",
+        });
+
         // todo: store result in redis
         ch.ack(msg);
       } catch (error) {
-        console.error("Error processing message:", error);
-        ch.nack(msg, false, false); // Don't requeue failed messages
+        ch.nack(msg, false, false);
+        console.log(
+          `💀 Message sent to Dead Letter Queue: ${routingKey}.failed\n`
+        );
       }
     }
   });
+};
+
+const fetch_template = async (template_code: string) => {
+  const res = await fetch(
+    `http://${app.config.CONSUL_HOST}:8500/v1/catalog/service/template-service`
+  );
+
+  const services = await res.json();
+
+  const template_service = services[0];
+
+  const templateUrl = `http://${
+    template_service.ServiceAddress || template_service.Address
+  }:${template_service.ServicePort}/api/v1/templates/${template_code}`;
+
+  const templateRes = await fetch(templateUrl);
+
+  const data = await templateRes.json();
+
+  console.log("template :", data);
 };
