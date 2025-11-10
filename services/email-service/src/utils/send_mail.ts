@@ -5,7 +5,7 @@ import app from "../app.js";
 
 let transporter: Transporter;
 
-function createTransporter(): Transporter {
+function create_transporter(): Transporter {
   return nodemailer.createTransport({
     host: app.config.SMTP_HOST,
     port: app.config.SMTP_PORT,
@@ -16,16 +16,22 @@ function createTransporter(): Transporter {
   });
 }
 
-function getTransporter(): Transporter {
+function get_transporter(): Transporter {
   if (!transporter) {
-    transporter = createTransporter();
+    transporter = create_transporter();
   }
   return transporter;
 }
 
-async function sendMail({ from, to, html, subject, ...rest }: SendMailOptions) {
+async function send_mail({
+  from,
+  to,
+  html,
+  subject,
+  ...rest
+}: SendMailOptions) {
   try {
-    const result = await getTransporter().sendMail({
+    const result = await get_transporter().sendMail({
       from,
       to,
       subject,
@@ -40,4 +46,4 @@ async function sendMail({ from, to, html, subject, ...rest }: SendMailOptions) {
   }
 }
 
-export default sendMail;
+export default send_mail;

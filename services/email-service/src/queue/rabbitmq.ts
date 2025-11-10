@@ -4,7 +4,7 @@ import app from "../app.js";
 let connection: amqplib.ChannelModel | null = null;
 let channel: amqplib.Channel | null = null;
 
-export const getChannel = async () => {
+export const get_channel = async () => {
   if (!connection) {
     connection = await amqplib.connect(app.config.RABBITMQ_CONNECTION_URL);
 
@@ -28,11 +28,11 @@ export const getChannel = async () => {
   return channel;
 };
 
-export const consumeQueue = async <T>(
+export const consume_queue = async <T>(
   routingKey: "email" | "push",
   callback: (data: T) => Promise<void>
 ) => {
-  const ch = await getChannel();
+  const ch = await get_channel();
   ch.assertExchange("notifications.direct", "direct", { durable: true });
   await ch.assertQueue(`${routingKey}.queue`, {
     durable: true,

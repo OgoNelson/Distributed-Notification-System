@@ -2,7 +2,7 @@ import env from "@fastify/env";
 import mysql from "@fastify/mysql";
 import Fastify from "fastify";
 
-import { templateRoutes } from "./routes.js";
+import { template_routes } from "./routes.js";
 import { envSchema as schema } from "./schema.js";
 
 const app = Fastify({ logger: true });
@@ -18,7 +18,7 @@ app.register(mysql, {
   connectionString: app.config.DB_URL,
 });
 
-app.register(templateRoutes, { prefix: "/api/v1/templates" });
+app.register(template_routes, { prefix: "/api/v1/templates" });
 
 app.get("/health", async (_request, reply) => {
   reply.send({ status: "ok" });

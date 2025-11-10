@@ -1,4 +1,4 @@
-export const templateRoutes = async (fastify: any) => {
+export const template_routes = async (fastify: any) => {
   fastify.get("/", async (_request: any, reply: any) => {
     const [templates] = await fastify.mysql.query("SELECT * FROM templates");
     reply.code(200).send(templates);

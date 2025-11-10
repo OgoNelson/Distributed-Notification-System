@@ -7,6 +7,9 @@ declare module "fastify" {
       SMTP_USER: string;
       SMTP_PASS: string;
       SMTP_PORT: number;
+      SERVICE_NAME: string;
+      CONSUL_HOST: string;
+      CONSUL_PORT: number;
       SMTP_HOST: string;
       RABBITMQ_CONNECTION_URL: string;
       NODE_ENV: "development" | "production";
