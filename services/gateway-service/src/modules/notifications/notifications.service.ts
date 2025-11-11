@@ -1,12 +1,17 @@
-import { Injectable, Inject, BadRequestException, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import { lastValueFrom } from 'rxjs';
-import Redis from 'ioredis';
-import { CreateNotificationDto, NotificationType } from './dto/notification.dto';
 import {
-  UpdateNotificationStatusDto,
-  NotificationStatus,
-} from './dto/notification-status.dto';
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
+import Redis from 'ioredis';
+import { lastValueFrom } from 'rxjs';
+import { UpdateNotificationStatusDto } from './dto/notification-status.dto';
+import {
+  CreateNotificationDto,
+  NotificationType,
+} from './dto/notification.dto';
 
 @Injectable()
 export class NotificationsService {
@@ -19,9 +24,8 @@ export class NotificationsService {
     @Inject('RABBITMQ_CONNECTION') private mqProvider: any,
     private readonly http: HttpService,
   ) {
-    // mqProvider is { channel, exchange }
     this.channel = mqProvider?.channel;
-    this.exchange = mqProvider?.exchange || process.env.RABBITMQ_EXCHANGE || 'notifications.direct';
+    this.exchange = mqProvider?.exchange;
     this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
   }
 
@@ -39,81 +43,98 @@ export class NotificationsService {
 
     if (!request_id) throw new BadRequestException('request_id is required');
 
-    // Idempotency check
-    const key = `notification:${request_id}`;
-    const existing = await this.redis.get(key);
-    if (existing) {
-      this.logger.warn(`Duplicate request detected: ${request_id}`);
-      throw new BadRequestException('Duplicate request_id detected');
-    }
-
-    // Fetch user details from User Service
+    // validate user
+    // todo: implement circuit breaker and consul dynamic service discovery
     const userUrl = `${process.env.USER_SERVICE_URL}/api/v1/users/${user_id}`;
     let userRes;
     try {
       userRes = await lastValueFrom(this.http.get(userUrl));
     } catch (err) {
-      this.logger.error('User service request failed', err?.response?.data || err.message);
+      this.logger.error(
+        'User service request failed',
+        err?.response?.data || err.message,
+      );
       throw new BadRequestException('Failed to fetch user');
     }
+
+    console.log(userRes);
     const user = userRes?.data?.data;
     if (!user) throw new BadRequestException('User not found');
 
-    // Validate user preference for this notification_type
-    const prefKey = notification_type === NotificationType.EMAIL ? 'email' : 'push';
+    // validate notification preference
+    const prefKey =
+      notification_type === NotificationType.EMAIL ? 'email' : 'push';
+
     if (!user.preferences || !user.preferences[prefKey]) {
-      throw new BadRequestException(`${notification_type} notifications disabled for user`);
+      return {
+        message: `${notification_type} notifications disabled by user`,
+        data: {
+          request_id: request_id,
+          notification_type: notification_type,
+          priority: priority,
+        },
+        meta: null,
+      };
     }
 
-    // Fetch template from Template Service by code/path
-    const templateUrl = `${process.env.TEMPLATE_SERVICE_URL}/api/v1/templates/${encodeURIComponent(
-      template_code,
-    )}`;
-    let templateRes;
-    try {
-      templateRes = await lastValueFrom(this.http.get(templateUrl));
-    } catch (err) {
-      this.logger.error('Template service request failed', err?.response?.data || err.message);
-      throw new BadRequestException('Failed to fetch template');
-    }
-    const template = templateRes?.data?.data;
-    if (!template) throw new BadRequestException('Template not found');
+    // Idempotency key for uniqueness
+    const key = `notification:${request_id}`;
 
-    // Construct message that consumers (email/push) expect
-    const message = {
-      request_id,
-      notification_type,
-      user_id,
-      user,
-      template_code,
-      template,
-      variables,
-      priority: Number(priority) || 0,
-      metadata: metadata || {},
-      created_at: new Date().toISOString(),
-    };
+    const existing = JSON.parse((await this.redis.get(key)) || '{}');
+
+    if (existing) {
+      if (existing.status === 'pending' || existing.status === 'delivered') {
+        return {
+          message: 'Notification already processed',
+          data: { request_id, notification_type, priority },
+          meta: null,
+        };
+      }
+
+      if (existing.status === 'failed') {
+        return {
+          message: 'Notification previously failed',
+          data: { request_id, notification_type, priority },
+          meta: null,
+        };
+      }
+    } else {
+      await this.redis.set(
+        key,
+        JSON.stringify({
+          status: 'pending',
+          timestamp: new Date().toISOString(),
+        }),
+        'EX',
+        60 * 60 * 24, // keep for 24 hours
+      );
+    }
 
     // Publish to MQ
     try {
-      const routingKey = notification_type; // 'email' or 'push'
-      const payloadBuffer = Buffer.from(JSON.stringify(message));
-      await this.channel.publish(this.exchange, routingKey, payloadBuffer, {
-        persistent: true,
-        priority: Math.min(Math.max(Number(priority) || 0, 0), 9), // map priority within 0-9
-      });
+      await this.channel.publish(
+        this.exchange,
+        notification_type,
+        Buffer.from(
+          JSON.stringify({
+            notification_type,
+            user_id,
+            template_code,
+            variables,
+            request_id,
+            priority,
+            metadata,
+          }),
+        ),
+        {
+          persistent: true,
+          priority,
+        },
+      );
     } catch (err) {
       this.logger.error('Failed to publish to queue', err?.message || err);
-      // Optionally push to failed queue directly
       throw new BadRequestException('Failed to queue notification');
     }
-
-    // Save initial status in Redis
-    await this.redis.set(
-      key,
-      JSON.stringify({ status: 'queued', created_at: new Date().toISOString() }),
-      'EX',
-      60 * 60 * 24, // keep for 24h (adjust as you like)
-    );
 
     return {
       message: `${notification_type} notification queued successfully`,
@@ -123,25 +144,31 @@ export class NotificationsService {
   }
 
   // Called by downstream services to update status
-  async updateStatus(notification_type: string, body: UpdateNotificationStatusDto) {
+  async updateStatus(
+    notification_type: string,
+    body: UpdateNotificationStatusDto,
+  ) {
     const { notification_id, status, timestamp, error } = body;
 
-    if (!notification_id) throw new BadRequestException('notification_id required');
+    if (!notification_id)
+      throw new BadRequestException('notification_id required');
 
     const key = `notification:${notification_id}`;
 
     const record = {
       status,
       error: error || null,
-      updated_at: timestamp || new Date().toISOString(),
-      source: notification_type,
+      timestamp: timestamp || new Date().toISOString(),
     };
 
-    await this.redis.set(key, JSON.stringify(record), 'EX', 60 * 60 * 24 * 7); // keep for 7 days
+    await this.redis.set(key, JSON.stringify(record), 'EX', 60 * 60 * 24); // keep for 24 hours
 
-    // Optionally: append to a list of status events for that notification
-    await this.redis.lpush(`notification_events:${notification_id}`, JSON.stringify(record));
-    await this.redis.ltrim(`notification_events:${notification_id}`, 0, 100); // keep last 100
+    // // Optionally: append to a list of status events for that notification
+    // await this.redis.lpush(
+    //   `notification_events:${notification_id}`,
+    //   JSON.stringify(record),
+    // );
+    // await this.redis.ltrim(`notification_events:${notification_id}`, 0, 100); // keep last 100
 
     return {
       message: `${notification_type} notification status updated`,
@@ -154,16 +181,28 @@ export class NotificationsService {
     const key = `notification:${request_id}`;
     const raw = await this.redis.get(key);
     if (!raw) {
-      return { message: 'not found', data: null, meta: null };
+      return { success: false, message: 'not found', data: null, meta: null };
     }
     const parsed = JSON.parse(raw);
     // Also return recent events if present
-    const eventsRaw = await this.redis.lrange(`notification_events:${request_id}`, 0, 50);
-    const events = eventsRaw.map(e => {
-      try { return JSON.parse(e); } catch { return e; }
-    });
+    // const eventsRaw = await this.redis.lrange(
+    //   `notification_events:${request_id}`,
+    //   0,
+    //   50,
+    // );
 
-    return { message: 'ok', data: { request_id, status: parsed, events }, meta: null };
+    // const events = eventsRaw.map((e) => {
+    //   try {
+    //     return JSON.parse(e);
+    //   } catch {
+    //     return e;
+    //   }
+    // });
+
+    return {
+      message: 'ok',
+      data: { request_id, status: parsed },
+      meta: null,
+    };
   }
 }
-

@@ -1,8 +1,11 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
 import * as dotenv from 'dotenv';
+import { AppModule } from './app.module';
 
 dotenv.config();
 
@@ -24,14 +27,14 @@ async function bootstrap() {
   );
 
   // optional CORS
-  await app.enableCors();
+  app.enableCors();
 
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   await app.listen(port, '0.0.0.0');
   console.log(`API Gateway listening on port ${port}`);
 }
 
-bootstrap().catch(err => {
+bootstrap().catch((err) => {
   console.error('Bootstrap error', err);
   process.exit(1);
 });

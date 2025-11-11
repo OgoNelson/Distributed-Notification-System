@@ -15,4 +15,3 @@ import { RabbitMQProvider } from './modules/queues/rabbitmq.provider';
   exports: [RabbitMQProvider],
 })
 export class AppModule {}
-
