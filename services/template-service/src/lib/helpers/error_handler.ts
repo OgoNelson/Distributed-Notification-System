@@ -1,8 +1,9 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-interface AppError extends Error {
+interface IError extends Error {
   statusCode?: number;
   isOperational?: boolean;
+  validation?: any;
 }
 
 const errorHandler = (
@@ -10,14 +11,14 @@ const errorHandler = (
   _request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const err = error as AppError;
+  const err = error as IError;
 
   reply.status(err.statusCode ?? 500).send({
     success: false,
     message: err.isOperational
       ? err.message ?? "Internal Server Error"
       : "Internal Server Error",
-    error: err.isOperational ? "Fail" : "InternalServerError",
+    error: err.validation ?? undefined,
   });
 };
 

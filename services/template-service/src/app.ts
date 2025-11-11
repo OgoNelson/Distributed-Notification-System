@@ -1,17 +1,38 @@
 import env from "@fastify/env";
 import mysql from "@fastify/mysql";
+import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
 import Fastify from "fastify";
 
 import error_handler from "./lib/helpers/error_handler.js";
-import { template_routes } from "./routes.js";
-import { envSchema as schema } from "./schema.js";
+import template_routes from "./routes/template_route.js";
+import { env_schema } from "./schema.js";
 
 const app = Fastify({ logger: true });
 
 await app.register(env, {
   confKey: "config",
-  schema,
+  schema: env_schema,
   dotenv: true,
+});
+
+await app.register(swagger, {
+  openapi: {
+    info: {
+      title: "Template Service",
+      version: "1.0.0",
+    },
+    servers: [{ url: "http://localhost:" + app.config.PORT }],
+  },
+});
+
+await app.register(swaggerUi, {
+  routePrefix: "/docs",
+  uiConfig: {
+    docExpansion: "full",
+    deepLinking: false,
+  },
+  staticCSP: true,
 });
 
 app.register(mysql, {

@@ -86,9 +86,10 @@ export const consume_queue = async (
           html: "<p>something</p>",
         });
 
-        // todo: store result in redis
+        // todo: call gateway status update endpoint to mark notification as sent
         ch.ack(msg);
       } catch (error) {
+        // call gateway status update endpoint to mark notification as failed
         ch.nack(msg, false, false);
         console.log(
           `💀 Message sent to Dead Letter Queue: ${routingKey}.failed\n`
