@@ -8,33 +8,25 @@ use Illuminate\Support\Facades\Redis; // For Redis ping
 class HealthController extends Controller
 {
     /**
-     * Check service health. Pings DB and Redis.
-     * Returns 200 if healthy, else 503.
+     * Health check endpoint. Returns standard response format.
      */
-    public function check()
+    public function index()
     {
-        $status = 'healthy';
-        $details = [];
-
+        $dbStatus = 'connected';
         try {
-            DB::connection()->getPdo(); // Try DB connection
-            $details['db'] = 'connected';
+            \Illuminate\Support\Facades\DB::connection()->getPdo();
         } catch (\Exception $e) {
-            $status = 'unhealthy';
-            $details['db'] = 'disconnected';
+            $dbStatus = 'disconnected';
         }
-
-        try {
-            Redis::ping(); // Try Redis connection
-            $details['redis'] = 'connected';
-        } catch (\Exception $e) {
-            $status = 'unhealthy';
-            $details['redis'] = 'disconnected';
-        }
-
+        $isHealthy = $dbStatus === 'connected';
         return response()->json([
-            'status' => $status,
-            ...$details, // Spread details into response
-        ], $status === 'healthy' ? 200 : 503);
+            'success' => $isHealthy,
+            'data' => [
+                'status' => $isHealthy ? 'ok' : 'error',
+                'db' => $dbStatus,
+                'timestamp' => now()->toIso8601String(),
+            ],
+            'message' => $isHealthy ? 'Service is healthy' : 'Service is unhealthy',
+        ], $isHealthy ? 200 : 503);
     }
 }

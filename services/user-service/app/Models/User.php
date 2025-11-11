@@ -36,6 +36,15 @@ class User extends Authenticatable
         'username',
         'email',
         'password',
+        'push_tokens',
+    ];
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'push_tokens' => 'array',
     ];
 
     /**

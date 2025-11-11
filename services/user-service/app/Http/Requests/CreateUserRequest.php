@@ -25,6 +25,8 @@ class CreateUserRequest extends FormRequest
             'username' => 'required|string|unique:users',
             'email' => 'required|email|unique:users',
             'password' => 'required|string|min:8',
+            'email_notifications_enabled' => 'boolean',
+            'push_notifications_enabled' => 'boolean',
         ];
     }
 

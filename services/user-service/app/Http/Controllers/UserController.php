@@ -110,11 +110,17 @@ class UserController extends Controller
         }
 
         // Create user from validated data (password auto-hashed)
-        $user = User::create($request->validated());
+        $userData = $request->only(['username', 'email', 'password']);
+        $user = User::create($userData);
 
-        // Mark as processed in Redis (TTL 24 hours for safety)
-        if ($requestId) {
-            Redis::set($cacheKey, 'processed', 'EX', 86400);
+        // Create preferences if provided
+        $prefData = $request->only([
+            'email_notifications_enabled',
+            'push_notifications_enabled',
+        ]);
+        if (!empty($prefData)) {
+            $prefData['user_id'] = $user->id;
+            \App\Models\UserPreference::create($prefData);
         }
 
         // Invalidate any old cache for this user (if exists)

@@ -50,21 +50,4 @@ class AuthController extends Controller
             'message' => 'Logout successful',
         ]);
     }
-
-    /**
-     * Get user permissions. Returns roles/permissions for the user.
-     */
-    public function permissions($id)
-    {
-        $user = User::findOrFail($id); // Find user or 404
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'roles' => $user->getRoleNames(), // From Spatie
-                'permissions' => $user->getAllPermissions()->pluck('name'), // All permissions
-            ],
-            'message' => 'Permissions retrieved',
-        ]);
-    }
 }

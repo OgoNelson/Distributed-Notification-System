@@ -13,8 +13,6 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->boolean('email_notifications_enabled')->default(true); // Default to allow emails
             $table->boolean('push_notifications_enabled')->default(true); // Default to allow pushes
-            $table->string('preferred_language')->default('en'); // Default language code
-            $table->json('do_not_disturb_times')->nullable(); // JSON array for time ranges, e.g., [{"start": "22:00", "end": "08:00"}]
             $table->timestamps();
         });
     }

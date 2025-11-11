@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "lint": "echo 'No linter configured for email-service'",
+    "type-check": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",

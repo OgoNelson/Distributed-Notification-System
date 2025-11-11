@@ -14,8 +14,6 @@ class UserPreference extends Model
         'user_id',
         'email_notifications_enabled',
         'push_notifications_enabled',
-        'preferred_language',
-        'do_not_disturb_times',
     ];
 
     /**
@@ -23,7 +21,6 @@ class UserPreference extends Model
      * Laravel automatically handles JSON to array conversion.
      */
     protected $casts = [
-        'do_not_disturb_times' => 'array',
         'email_notifications_enabled' => 'boolean',
         'push_notifications_enabled' => 'boolean',
     ];

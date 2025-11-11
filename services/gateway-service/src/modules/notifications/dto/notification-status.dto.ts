@@ -1,23 +1,23 @@
-import { IsEnum, IsString, IsOptional, IsDateString } from 'class-validator';
+import { IsEnum, IsString, IsOptional, IsDateString } from "class-validator"
 
 export enum NotificationStatus {
-  DELIVERED = 'delivered',
-  PENDING = 'pending',
-  FAILED = 'failed',
+  DELIVERED = "delivered",
+  PENDING = "pending",
+  FAILED = "failed",
 }
 
 export class UpdateNotificationStatusDto {
   @IsString()
-  notification_id: string;
+  notification_id: string
 
   @IsEnum(NotificationStatus)
-  status: NotificationStatus;
+  status: NotificationStatus
 
   @IsOptional()
   @IsDateString()
-  timestamp?: string;
+  timestamp?: string
 
   @IsOptional()
   @IsString()
-  error?: string;
+  error?: string
 }

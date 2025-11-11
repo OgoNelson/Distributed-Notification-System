@@ -16,7 +16,7 @@ export const env_schema = {
     CONSUL_PORT: { type: "number", default: 8500 },
     NODE_ENV: { type: "string", default: "development" },
   },
-};
+}
 
 export const create_template_schema = {
   type: "object",
@@ -26,7 +26,7 @@ export const create_template_schema = {
     subject: { type: "string" },
     body: { type: "string" },
   },
-};
+}
 
 export const update_template_schema = {
   type: "object",
@@ -36,4 +36,4 @@ export const update_template_schema = {
     body: { type: "string" },
   },
   additionalProperties: false,
-};
+}

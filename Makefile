@@ -138,3 +138,67 @@ rebuild-email:
 rebuild-template:
 	docker-compose build --no-cache template-service
 	docker-compose up -d template-service
+
+rebuild-user:
+	docker-compose build --no-cache user-service
+	docker-compose up -d user-service
+
+# Laravel specific commands
+laravel-migrate:
+	docker-compose exec user-service php artisan migrate
+
+laravel-migrate-fresh:
+	docker-compose exec user-service php artisan migrate:fresh --seed
+
+laravel-seed:
+	docker-compose exec user-service php artisan db:seed
+
+laravel-cache:
+	docker-compose exec user-service php artisan config:cache
+	docker-compose exec user-service php artisan route:cache
+	docker-compose exec user-service php artisan view:cache
+
+laravel-cache-clear:
+	docker-compose exec user-service php artisan config:clear
+	docker-compose exec user-service php artisan route:clear
+	docker-compose exec user-service php artisan view:clear
+	docker-compose exec user-service php artisan cache:clear
+
+laravel-shell:
+	docker-compose exec user-service sh
+
+laravel-tinker:
+	docker-compose exec user-service php artisan tinker
+
+laravel-logs:
+	docker-compose logs -f user-service
+
+laravel-queue-work:
+	docker-compose exec user-service php artisan queue:work
+
+laravel-composer:
+	docker-compose exec user-service composer install
+
+laravel-octane-reload:
+	docker-compose exec user-service php artisan octane:reload
+
+laravel-octane-status:
+	docker-compose exec user-service php artisan octane:status
+
+# Install all dependencies (root + services)
+install:
+	pnpm install
+	cd services/gateway-service && pnpm install
+	cd services/template-service && pnpm install
+	cd services/email-service && pnpm install
+	docker-compose exec user-service composer install
+
+# Format all code (prettier for JS/TS, pint for PHP)
+format-all:
+	pnpm run format
+	docker-compose exec user-service ./vendor/bin/pint
+
+# Run all tests
+test-all:
+	pnpm -r run test
+	docker-compose exec user-service php artisan test

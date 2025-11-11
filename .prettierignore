@@ -1,0 +1,36 @@
+# Dependencies
+node_modules
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist
+build
+.next
+out
+coverage
+
+# Environment files
+.env
+.env.*
+
+# Logs
+*.log
+logs
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+
+# Git
+.git
+.gitignore

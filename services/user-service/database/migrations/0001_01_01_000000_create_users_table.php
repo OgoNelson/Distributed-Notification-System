@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->json('push_tokens')->nullable(); // Array of push notification tokens
             $table->rememberToken();
             $table->timestamps();
         });

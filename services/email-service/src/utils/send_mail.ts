@@ -1,9 +1,9 @@
-import nodemailer from "nodemailer";
+import nodemailer from "nodemailer"
 
-import type { SendMailOptions, Transporter } from "nodemailer";
-import app from "../app.js";
+import type { SendMailOptions, Transporter } from "nodemailer"
+import app from "../app.js"
 
-let transporter: Transporter;
+let transporter: Transporter
 
 function create_transporter(): Transporter {
   return nodemailer.createTransport({
@@ -13,14 +13,14 @@ function create_transporter(): Transporter {
       user: app.config.SMTP_USER,
       pass: app.config.SMTP_PASS,
     },
-  });
+  })
 }
 
 function get_transporter(): Transporter {
   if (!transporter) {
-    transporter = create_transporter();
+    transporter = create_transporter()
   }
-  return transporter;
+  return transporter
 }
 
 async function send_mail({
@@ -37,13 +37,13 @@ async function send_mail({
       subject,
       html,
       ...rest,
-    });
+    })
 
-    return result;
+    return result
   } catch (e) {
-    console.error(e);
-    throw e;
+    console.error(e)
+    throw e
   }
 }
 
-export default send_mail;
+export default send_mail

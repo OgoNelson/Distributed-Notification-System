@@ -6,47 +6,47 @@ import {
   IsOptional,
   ValidateNested,
   IsObject,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+} from "class-validator"
+import { Type } from "class-transformer"
 
 export enum NotificationType {
-  EMAIL = 'email',
-  PUSH = 'push',
+  EMAIL = "email",
+  PUSH = "push",
 }
 
 export class UserDataDto {
   @IsString()
-  name: string;
+  name: string
 
   @IsString()
-  link: string;
+  link: string
 
   @IsOptional()
   @IsObject()
-  meta?: Record<string, any>;
+  meta?: Record<string, any>
 }
 
 export class CreateNotificationDto {
   @IsEnum(NotificationType)
-  notification_type: NotificationType;
+  notification_type: NotificationType
 
   @IsUUID()
-  user_id: string;
+  user_id: string
 
   @IsString()
-  template_code: string;
+  template_code: string
 
   @ValidateNested()
   @Type(() => UserDataDto)
-  variables: UserDataDto;
+  variables: UserDataDto
 
   @IsString()
-  request_id: string;
+  request_id: string
 
   @IsInt()
-  priority: number;
+  priority: number
 
   @IsOptional()
   @IsObject()
-  metadata?: Record<string, any>;
+  metadata?: Record<string, any>
 }
