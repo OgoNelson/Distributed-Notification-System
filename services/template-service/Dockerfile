@@ -8,20 +8,20 @@ RUN npm install -g pnpm@10.20.0
 
 WORKDIR /app
 
-# Copy root pnpm files (lockfile + workspace)
-COPY ../../pnpm-workspace.yaml ../../pnpm-lock.yaml ../../package.json ./
+# Copy root workspace files (relative to repo root)
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 
-# Copy service package.json
-COPY package.json ./ 
+# Copy template service package.json
+COPY services/template-service/package.json ./services/template-service/
 
-# Install only this service's dependencies (with dev)
-RUN pnpm install --frozen-lockfile --filter ./
+# Install dependencies including dev for build
+RUN pnpm install --frozen-lockfile --filter ./services/template-service...
 
-# Copy source code
-COPY . .
+# Copy template service source code
+COPY services/template-service ./services/template-service
 
-# Build TypeScript
-RUN pnpm build
+# Build the project
+RUN pnpm build --filter ./services/template-service...
 
 # =========================
 # Production stage
@@ -33,14 +33,14 @@ RUN npm install -g pnpm@10.20.0
 
 WORKDIR /app
 
-# Copy root pnpm files
-COPY ../../pnpm-workspace.yaml ../../pnpm-lock.yaml ../../package.json ./
+# Copy root workspace files
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 
-# Copy service package.json
-COPY package.json ./
+# Copy template service package.json
+COPY services/template-service/package.json ./services/template-service/
 
-# Install only production dependencies for this service
-RUN pnpm install --prod --frozen-lockfile --filter ./
+# Install only production dependencies
+RUN pnpm install --prod --frozen-lockfile --filter ./services/template-service...
 
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist

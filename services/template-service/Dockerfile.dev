@@ -7,16 +7,16 @@ RUN npm install -g pnpm@10.20.0
 WORKDIR /app
 
 # Copy root workspace files
-COPY ../../pnpm-workspace.yaml ../../pnpm-lock.yaml ../../package.json ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 
-# Copy service package.json
-COPY package.json ./
+# Copy template service package.json
+COPY services/template-service/package.json ./services/template-service/
 
 # Install only this service's dependencies (dev + prod)
-RUN pnpm install --filter ./
+RUN pnpm install --filter ./services/template-service...
 
 # Copy source code
-COPY . .
+COPY services/template-service ./services/template-service
 
 # Expose port for development
 EXPOSE 3002

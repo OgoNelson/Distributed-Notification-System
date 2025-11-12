@@ -1,24 +1,40 @@
+# ======================================
 # Development Dockerfile for user-service (Laravel)
+# ======================================
 FROM php:8.2-fpm-alpine
 
 # Install system dependencies
-RUN apk add --no-cache bash git curl libpng libjpeg-turbo libwebp freetype icu-dev zlib-dev oniguruma-dev libxml2-dev
+RUN apk add --no-cache \
+    bash \
+    git \
+    curl \
+    zip \
+    unzip \
+    libpng \
+    libjpeg-turbo \
+    libwebp \
+    freetype \
+    icu-dev \
+    zlib-dev \
+    oniguruma-dev \
+    libxml2-dev
 
 # Install Composer
 COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
 
-# Copy only composer files first for caching
-COPY composer.json composer.lock ./
+# Copy composer files from the correct service directory
+COPY services/user-service/composer.json ./
+COPY services/user-service/composer.lock* ./
 
-# Install PHP dependencies
-RUN composer install --prefer-dist --no-progress --no-interaction
+# Install dependencies
+RUN composer install --prefer-dist --no-interaction --no-progress
 
-# Copy the rest of the application
-COPY . .
+# Copy full source code for this service
+COPY services/user-service ./
 
-# Expose port for development
+# Expose port for Laravel Octane
 EXPOSE 8000
 
 # Start Octane in watch mode

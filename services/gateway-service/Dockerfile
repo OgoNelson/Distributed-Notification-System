@@ -8,20 +8,20 @@ RUN npm install -g pnpm@10.20.0
 
 WORKDIR /app
 
-# Copy root workspace files
-COPY ../../pnpm-workspace.yaml ../../pnpm-lock.yaml ../../package.json ./
+# Copy root workspace files (relative to repo root)
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 
-# Copy service package.json
-COPY package.json ./
+# Copy gateway service package.json
+COPY services/gateway-service/package.json ./services/gateway-service/
 
-# Install only this service's dependencies (including dev for build)
-RUN pnpm install --frozen-lockfile --filter ./
+# Install dependencies including dev for build
+RUN pnpm install --frozen-lockfile --filter ./services/gateway-service...
 
-# Copy source code
-COPY . .
+# Copy gateway service source code
+COPY services/gateway-service ./services/gateway-service
 
 # Build the project
-RUN pnpm build
+RUN pnpm build --filter ./services/gateway-service...
 
 # =========================
 # Production stage
@@ -34,16 +34,16 @@ RUN npm install -g pnpm@10.20.0
 WORKDIR /app
 
 # Copy root workspace files
-COPY ../../pnpm-workspace.yaml ../../pnpm-lock.yaml ../../package.json ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 
-# Copy service package.json
-COPY package.json ./
+# Copy gateway service package.json
+COPY services/gateway-service/package.json ./services/gateway-service/
 
-# Install only production dependencies for this service
-RUN pnpm install --prod --frozen-lockfile --filter ./
+# Install only production dependencies
+RUN pnpm install --prod --frozen-lockfile --filter ./services/gateway-service...
 
-# Copy built files from builder
-COPY --from=builder /app/dist ./dist
+# Copy built files from builder stage
+COPY --from=builder /app/services/gateway-service/dist ./dist
 
 # Expose port
 EXPOSE 3000
