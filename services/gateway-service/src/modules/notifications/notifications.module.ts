@@ -5,9 +5,10 @@ import { UsersModule } from "../users/users.module"
 import { NotificationsController } from "./notifications.controller"
 import { NotificationsService } from "./notifications.service"
 import { UsersService } from "../users/users.service"
+import { ConsulModule } from "../../consul/consul.module"
 
 @Module({
-  imports: [HttpModule, UsersModule],
+  imports: [HttpModule, UsersModule, ConsulModule],
   controllers: [NotificationsController],
   providers: [NotificationsService, RabbitMQProvider, UsersService],
   exports: [NotificationsService],

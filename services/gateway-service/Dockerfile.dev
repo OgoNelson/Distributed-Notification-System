@@ -7,19 +7,19 @@ RUN npm install -g pnpm@10.20.0
 WORKDIR /app
 
 # Copy root workspace files
-COPY ../../pnpm-workspace.yaml ../../pnpm-lock.yaml ../../package.json ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 
-# Copy service package.json
-COPY package.json ./
+# Copy gateway service package.json
+COPY services/gateway-service/package.json ./services/gateway-service/
 
 # Install only this service's dependencies (dev + prod)
-RUN pnpm install --filter ./
+RUN pnpm install --filter ./services/gateway-service...
 
 # Copy source code
-COPY . .
+COPY services/gateway-service ./services/gateway-service
 
 # Expose port for development
 EXPOSE 3000
 
 # Start the app in NestJS watch mode
-CMD ["pnpm", "start:dev"]
+CMD ["pnpm", "start:dev", "--filter", "./services/gateway-service"]

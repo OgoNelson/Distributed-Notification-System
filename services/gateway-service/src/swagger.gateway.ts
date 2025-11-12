@@ -1,42 +1,74 @@
-import { INestApplication, Injectable } from "@nestjs/common"
+import { INestApplication, Injectable, Logger } from "@nestjs/common"
 import { HttpService } from "@nestjs/axios"
 import { lastValueFrom } from "rxjs"
 import merge from "lodash.merge"
 import { FastifyInstance } from "fastify"
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger"
+import { ConsulService } from "./consul/consul.service"
 
 interface MicroserviceSpec {
   name: string
   url: string
 }
 
-const MICROSERVICES: MicroserviceSpec[] = [
-  { name: "Email", url: "http://email-service:3001/docs/json" },
-  { name: "Push", url: "http://push-service:3002/docs/json" },
-  { name: "Template", url: "http://template-service:3003/docs/json" },
-  { name: "User", url: "http://user-service:8000/api-docs/openapi.json" },
-]
-
 @Injectable()
 export class SwaggerGateway {
-  constructor(private readonly httpService: HttpService) {}
+  private readonly logger = new Logger(SwaggerGateway.name)
+  private cachedSpec: any = null
+  private lastFetched: number = 0
+  private cacheTtl = 60 * 1000 // 1 minute cache
+
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly consulService: ConsulService,
+  ) {}
 
   async setup(app: INestApplication) {
-    // Get Fastify instance
     const fastifyApp = app.getHttpAdapter().getInstance() as FastifyInstance
 
-    // Endpoint to serve merged OpenAPI JSON
-    fastifyApp.get("/swagger/api-docs", async (request, reply) => {
+    // Endpoint to serve merged OpenAPI JSON dynamically
+    fastifyApp.get("/swagger/api-docs.json", async (request, reply) => {
       try {
+        // Use cached spec if not expired
+        const now = Date.now()
+        if (this.cachedSpec && now - this.lastFetched < this.cacheTtl) {
+          return reply.send(this.cachedSpec)
+        }
+
+        const serviceNames = [
+          "email-service",
+          "push-service",
+          "template-service",
+          "user-service",
+        ]
+        const MICROSERVICES: MicroserviceSpec[] = []
+
+        for (const name of serviceNames) {
+          try {
+            const serviceUrl = await this.consulService.getServiceAddress(name)
+            if (!serviceUrl) {
+              this.logger.warn(`Service ${name} not found in Consul`)
+              continue
+            }
+            let path = "/docs/json"
+            if (name === "user-service") path = "/api-docs/openapi.json" // user-service specific path
+            MICROSERVICES.push({ name, url: `${serviceUrl}${path}` })
+          } catch (err) {
+            this.logger.warn(
+              `Failed to get ${name} URL from Consul: ${err.message}`,
+            )
+          }
+        }
+
         const specs = await Promise.all(
           MICROSERVICES.map(async svc => {
             try {
-              const response = await lastValueFrom(
-                this.httpService.get(svc.url),
-              )
-              return response.data
+              const res = await lastValueFrom(this.httpService.get(svc.url))
+              return res.data
             } catch (err) {
-              console.warn(`Failed to fetch ${svc.name} spec:`, err.message)
+              this.logger.warn(
+                `Failed to fetch ${svc.name} spec: ${err.message}`,
+              )
               return {}
             }
           }),
@@ -53,8 +85,12 @@ export class SwaggerGateway {
           components: {},
         })
 
+        this.cachedSpec = mergedSpec
+        this.lastFetched = now
+
         reply.send(mergedSpec)
       } catch (err) {
+        this.logger.error("Failed to merge microservice Swagger specs", err)
         reply.status(500).send({ error: "Failed to merge specs" })
       }
     })
@@ -70,7 +106,7 @@ export class SwaggerGateway {
 
     SwaggerModule.setup("swagger", app, document, {
       swaggerOptions: {
-        url: "/swagger/api-docs.json",
+        url: "/swagger/api-docs.json", // points to merged JSON
         explorer: true,
       },
     })

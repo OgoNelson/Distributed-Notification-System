@@ -4,6 +4,8 @@ import { NotificationsModule } from "./modules/notifications/notifications.modul
 import { RabbitMQProvider } from "./modules/queues/rabbitmq.provider"
 import { UsersModule } from "./modules/users/users.module"
 import { SwaggerGateway } from "./swagger.gateway"
+import { ConsulService } from "./consul/consul.service"
+import { HealthController } from "./health/health.controller"
 
 @Module({
   imports: [
@@ -14,7 +16,8 @@ import { SwaggerGateway } from "./swagger.gateway"
     NotificationsModule,
     UsersModule,
   ],
-  providers: [RabbitMQProvider, SwaggerGateway],
+  controllers: [HealthController],
+  providers: [RabbitMQProvider, SwaggerGateway, ConsulService],
   exports: [RabbitMQProvider],
 })
 export class AppModule {}

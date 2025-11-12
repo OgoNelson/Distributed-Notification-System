@@ -135,7 +135,7 @@ dev-logs-push:
 
 # Single service dev starts
 dev-gateway:
-	docker-compose $(DEV_COMPOSE) up -d gateway
+	docker-compose $(DEV_COMPOSE) up -d gateway-service
 
 dev-email:
 	docker-compose $(DEV_COMPOSE) up -d email-service

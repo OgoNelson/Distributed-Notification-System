@@ -2,18 +2,22 @@ import { Injectable, Logger } from "@nestjs/common"
 import { HttpService } from "@nestjs/axios"
 import { lastValueFrom } from "rxjs"
 import * as CircuitBreaker from "opossum"
+import { ConsulService } from "../../consul/consul.service"
 
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name)
   private breaker: CircuitBreaker<[string, string, any?], any>
 
-  constructor(private http: HttpService) {
-    // Configure Circuit Breaker
+  constructor(
+    private http: HttpService,
+    private readonly consulService: ConsulService,
+  ) {
+    // Circuit breaker options
     const options = {
-      timeout: 3000, // 3s timeout for requests
+      timeout: 3000, // 3s request timeout
       errorThresholdPercentage: 50, // Trip after 50% failures
-      resetTimeout: 10000, // Try again after 10s
+      resetTimeout: 10000, // Retry after 10s
     }
 
     this.breaker = new CircuitBreaker(this.callUserService.bind(this), options)
@@ -29,10 +33,11 @@ export class UsersService {
     )
   }
 
+  // Public method called by controllers or other services
   async forwardToUserService(method: string, path: string, data?: any) {
     try {
       return await this.breaker.fire(method, path, data)
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error("❌ User Service unavailable:", error.message)
       return {
         success: false,
@@ -42,8 +47,13 @@ export class UsersService {
     }
   }
 
+  // Circuit breaker calls this method
   private async callUserService(method: string, path: string, data?: any) {
-    const url = `${process.env.USER_SERVICE_URL}${path}`
+    // Dynamically get base URL from Consul
+    const baseUrl = await this.consulService.getServiceAddress("user-service")
+    if (!baseUrl) throw new Error("User service not found in Consul")
+
+    const url = `${baseUrl}${path}`
     const res = await lastValueFrom(
       this.http.request({
         method,
@@ -52,6 +62,7 @@ export class UsersService {
         timeout: 3000, // Request timeout
       }),
     )
+
     return res.data
   }
 }
