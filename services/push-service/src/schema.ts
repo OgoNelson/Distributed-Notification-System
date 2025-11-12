@@ -22,4 +22,4 @@ export const envSchema = {
     CONSUL_PORT: { type: "number" },
     NODE_ENV: { type: "string", default: "development" },
   },
-};
+}
