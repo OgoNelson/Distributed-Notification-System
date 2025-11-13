@@ -1,0 +1,280 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "User Service API",
+    "description": "User management microservice",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8000/api/v1",
+      "description": "Local Development"
+    }
+  ],
+  "paths": {
+    "/v1/health-check": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check",
+        "operationId": "ccad575053e1c232668c02c8677bb239",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "service": {
+                      "type": "string",
+                      "example": "user-service"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Register new user",
+        "operationId": "5653a998d64b50bc8473eb7b68ff36da",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "john@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "password123"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created"
+          }
+        }
+      }
+    },
+    "/v1/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login",
+        "operationId": "bee9ffab424c4f21e15ed984def1bf1d",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "required": ["email", "password"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Logout",
+        "operationId": "393da540fe0ac35abc99c869baca53b1",
+        "responses": {
+          "200": {
+            "description": "Logged out"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/users": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "List all users",
+        "operationId": "df60124dd115ae3187d6b47ccf4bccf9",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/users/{user}": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get user by ID",
+        "operationId": "fbc8981b839183f5509eae410ebd6285",
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Delete user",
+        "operationId": "9b50b5ab2b4333d9974cbd9b14ff30e4",
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": ["Users"],
+        "summary": "Update user",
+        "operationId": "9b50d0e59245151f38638d9328eed5ad",
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "bearerFormat": "JWT",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Health"
+    },
+    {
+      "name": "Auth",
+      "description": "Auth"
+    },
+    {
+      "name": "Users",
+      "description": "Users"
+    }
+  ]
+}
