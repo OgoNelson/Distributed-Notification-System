@@ -1,6 +1,5 @@
-# ======================================
-# Development Dockerfile for user-service (Laravel)
-# ======================================
+# Development Dockerfile
+
 FROM php:8.2-fpm-alpine
 
 # Set build-time arguments for build-essential packages
@@ -32,6 +31,17 @@ RUN apk add --no-cache \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install gd \
     && apk del ${BUILD_DEPS}
+
+# Install PHP extensions required by Laravel
+RUN docker-php-ext-install \
+    pdo \
+    pdo_mysql \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    intl \
+    opcache
 
 # Install Composer
 COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer

@@ -19,7 +19,16 @@ RUN apk add --no-cache \
     $PHPIZE_DEPS
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql pdo_pgsql pcntl xml gd sockets
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install \
+        pdo \
+        pdo_mysql \
+        pdo_pgsql \
+        pcntl \
+        xml \
+        gd \
+        sockets \
+        intl
 
 # Install Redis & Swoole extensions from PECL
 RUN pecl install redis swoole \
