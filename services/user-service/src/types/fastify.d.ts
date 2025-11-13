@@ -1,4 +1,6 @@
 import "fastify"
+import { MySQLPool } from "@fastify/mysql"
+import { JWT } from "@fastify/jwt"
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -9,6 +11,9 @@ declare module "fastify" {
       SERVICE_NAME: string
       CONSUL_HOST: string
       CONSUL_PORT: number
+      JWT_SECRET: string
     }
+    mysql: MySQLPool
+    jwt: JWT
   }
 }
