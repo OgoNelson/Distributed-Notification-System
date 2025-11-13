@@ -2,21 +2,35 @@
 
 FROM php:8.2-fpm-alpine
 
-# Install system dependencies
+# Set build-time arguments for build-essential packages
+ARG BUILD_DEPS="autoconf g++ make musl-dev libc-dev linux-headers"
+
+# Install system dependencies and PHP extensions in one layer
 RUN apk add --no-cache \
-    bash \
-    git \
-    curl \
-    zip \
-    unzip \
-    libpng \
-    libjpeg-turbo \
-    libwebp \
-    freetype \
+    ${BUILD_DEPS} \
+    freetype-dev \
+    libjpeg-turbo-dev \
+    libpng-dev \
+    libwebp-dev \
     icu-dev \
-    zlib-dev \
+    libxml2-dev \
     oniguruma-dev \
-    libxml2-dev
+    zlib-dev \
+    bash \
+    curl \
+    git \
+    unzip \
+    zip \
+    && docker-php-ext-install \
+        bcmath \
+        intl \
+        mbstring \
+        pdo_mysql \
+        sockets \
+        xml \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install gd \
+    && apk del ${BUILD_DEPS}
 
 # Install PHP extensions required by Laravel
 RUN docker-php-ext-install \
@@ -34,21 +48,15 @@ COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
 
-# Copy Composer files (specific to user-service)
-COPY services/user-service/composer.json ./ 
-COPY services/user-service/composer.lock* ./ 
+# --- FIX IS HERE ---
+# First, copy all your application files
+COPY services/user-service ./
 
-# Install dependencies without scripts or interaction
-RUN composer install --no-dev --prefer-dist --no-interaction --no-progress
+# Now, run composer install. It can find the 'artisan' file.
+RUN composer install --prefer-dist --no-interaction --no-progress
+# --- END FIX ---
 
-# Copy the rest of the service source code
-COPY services/user-service ./ 
-
-# Ensure correct permissions for Laravel storage and cache
-RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
-
-# Expose Laravel Octane default port
 EXPOSE 8000
 
-# Start Laravel Octane with host 0.0.0.0 (so it works in Docker)
-CMD ["php", "artisan", "octane:start", "--server=swoole", "--host=0.0.0.0", "--port=8000", "--watch"]
+# Start the application
+CMD ["php", "artisan", "octane:start", "--watch", "--host=0.0.0.0", "--port=8000"]
