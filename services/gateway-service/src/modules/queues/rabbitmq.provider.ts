@@ -1,27 +1,55 @@
-import { Provider } from "@nestjs/common"
+import { Provider, Logger } from "@nestjs/common"
 import * as amqp from "amqplib"
-import * as dotenv from "dotenv"
-dotenv.config()
+import { ConsulService } from "../../consul/consul.service"
 
 export const RabbitMQProvider: Provider = {
   provide: "RABBITMQ_CONNECTION",
-  useFactory: async () => {
-    const url = process.env.RABBITMQ_URL
-    if (!url) throw new Error("RABBITMQ_URL not set in env")
+  inject: [ConsulService],
+  useFactory: async (consulService: ConsulService) => {
+    const logger = new Logger("RabbitMQProvider")
 
-    const conn = await amqp.connect(url)
-    const channel = await conn.createChannel()
+    // Fetch RabbitMQ URL from Consul or fallback to env
+    let url = process.env.RABBITMQ_URL
+    if (!url) {
+      try {
+        const serviceAddress = await consulService.getServiceAddress("rabbitmq")
+        if (!serviceAddress)
+          throw new Error("RabbitMQ service not found in Consul")
+        url = `amqp://${serviceAddress}` // ensure proper protocol
+      } catch (err) {
+        logger.error("Failed to fetch RabbitMQ URL from Consul", err.message)
+        throw err
+      }
+    }
 
-    const exchange = process.env.RABBITMQ_EXCHANGE || "notifications.direct"
+    if (!url) throw new Error("RABBITMQ URL not available")
 
-    await channel.assertExchange(exchange, "direct", {
-      durable: true,
-      autoDelete: false,
-    })
+    try {
+      const conn = await amqp.connect(url)
 
-    // optional prefetch
-    await channel.prefetch(10)
+      // Handle connection close events
+      conn.on("error", err =>
+        logger.error("RabbitMQ connection error:", err.message),
+      )
+      conn.on("close", () => logger.warn("RabbitMQ connection closed"))
 
-    return { channel, exchange }
+      const channel = await conn.createChannel()
+
+      const exchange = process.env.RABBITMQ_EXCHANGE || "notifications.direct"
+
+      await channel.assertExchange(exchange, "direct", {
+        durable: true,
+        autoDelete: false,
+      })
+
+      // Optional prefetch
+      await channel.prefetch(10)
+
+      logger.log(`RabbitMQ connected, exchange: ${exchange}`)
+      return { channel, exchange, connection: conn }
+    } catch (err) {
+      logger.error("Failed to establish RabbitMQ connection", err.message)
+      throw err
+    }
   },
 }

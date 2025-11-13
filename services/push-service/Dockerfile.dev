@@ -1,4 +1,4 @@
-# Development Dockerfile for template-service
+# Development Dockerfile for push-service
 FROM node:20-alpine
 
 # Install pnpm
@@ -7,16 +7,16 @@ RUN npm install -g pnpm@10.20.0
 WORKDIR /app
 
 # Copy root workspace files
-COPY ../../pnpm-workspace.yaml ../../pnpm-lock.yaml ../../package.json ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 
-# Copy service package.json
-COPY package.json ./
+# Copy push service package.json
+COPY services/push-service/package.json ./services/push-service/
 
 # Install only this service's dependencies (dev + prod)
-RUN pnpm install --filter ./
+RUN pnpm install --filter ./services/push-service...
 
 # Copy source code
-COPY . .
+COPY services/push-service ./services/push-service
 
 # Expose port for development
 EXPOSE 3003
