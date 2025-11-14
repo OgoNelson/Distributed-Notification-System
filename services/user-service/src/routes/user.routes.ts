@@ -1,3 +1,3 @@
-const user_route = async (fastify: any) => {}
+const user_route = async () => {}
 
 export default user_route
