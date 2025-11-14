@@ -1,6 +1,7 @@
 import "fastify"
 import { MySQLPool } from "@fastify/mysql"
 import { JWT } from "@fastify/jwt"
+import { UserWithoutPassword } from "../models/user.model.js"
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -15,5 +16,9 @@ declare module "fastify" {
     }
     mysql: MySQLPool
     jwt: JWT
+  }
+
+  interface FastifyRequest {
+    user?: UserWithoutPassword
   }
 }

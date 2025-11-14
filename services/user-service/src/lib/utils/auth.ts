@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt"
-import type { FastifyInstance } from "fastify"
+import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify"
 import type { UserWithoutPassword } from "../../models/user.model.js"
 
 export class AuthUtils {
@@ -31,6 +31,47 @@ export class AuthUtils {
       return await fastify.jwt.verify(token)
     } catch (error) {
       throw new Error("Invalid token")
+    }
+  }
+
+  async authUser(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      // Get token from header
+      const authHeader = request.headers.authorization
+
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return reply.status(401).send({
+          success: false,
+          message: "Access denied. No token provided.",
+        })
+      }
+
+      const token = authHeader.split(" ")[1]
+
+      if (!token) {
+        return reply.status(401).send({
+          success: false,
+          message: "Access denied. Add JWT bearer Token.",
+        })
+      }
+
+      // Verify token
+      const decoded = await this.verifyToken(
+        request.server as FastifyInstance,
+        token,
+      )
+
+      // Attach user to request object
+      request.user = {
+        id: decoded.id,
+        email: decoded.email,
+        name: decoded.name,
+      }
+    } catch (error) {
+      return reply.status(401).send({
+        success: false,
+        message: "Invalid token.",
+      })
     }
   }
 }
