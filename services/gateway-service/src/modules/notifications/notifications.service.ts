@@ -51,6 +51,7 @@ export class NotificationsService {
   // ==========================
   async handleNotification(
     payload: CreateNotificationDto,
+    headers?: any,
   ): Promise<NotificationResponse> {
     const {
       notification_type,
@@ -69,7 +70,9 @@ export class NotificationsService {
     try {
       userRes = await this.usersService.forwardToUserService(
         "GET",
-        `/api/v1/user/${user_id}`,
+        `/api/v1/user`,
+        undefined,
+        headers,
       )
     } catch (err) {
       this.logger.error(

@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Query,
+  Headers,
 } from "@nestjs/common"
 import { UpdateNotificationStatusDto } from "./dto/notification-status.dto"
 import { CreateNotificationDto } from "./dto/notification.dto"
@@ -20,12 +21,13 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   // Create queue notification (email | push)
-  @Post("/notifications")
+  @Post("/")
   @HttpCode(HttpStatus.ACCEPTED)
   async createNotification(
     @Body() body: CreateNotificationDto,
+    @Headers() headers: Record<string, string>,
   ): Promise<NotificationResponse> {
-    return await this.notificationsService.handleNotification(body)
+    return await this.notificationsService.handleNotification(body, headers)
   }
 
   // Update notification status (email/push)

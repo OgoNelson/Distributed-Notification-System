@@ -7,7 +7,7 @@ import { ConsulService } from "../../consul/consul.service"
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name)
-  private breaker: CircuitBreaker<[string, string, any?], any>
+  private breaker: CircuitBreaker<[string, string, any?, any?], any>
 
   constructor(
     private http: HttpService,
@@ -33,9 +33,20 @@ export class UsersService {
   }
 
   // Gateway or controller calls this
-  async forwardToUserService(method: string, path: string, data?: any) {
+  async forwardToUserService(
+    method: string,
+    path: string,
+    data?: any,
+    headers?: any,
+  ) {
     try {
-      return await this.breaker.fire(method, path, data)
+      const headersToForward = {
+        authorization: headers?.authorization,
+        "x-request-id": headers?.["x-request-id"],
+        // Add any other custom headers you need to forward
+      }
+
+      return await this.breaker.fire(method, path, data, headersToForward)
     } catch (error: any) {
       this.logger.error("❌ User Service unavailable:", error.message)
       return {
@@ -47,13 +58,18 @@ export class UsersService {
   }
 
   // Circuit breaker calls this
-  private async callUserService(method: string, path: string, data?: any) {
+  private async callUserService(
+    method: string,
+    path: string,
+    data?: any,
+    headers?: any,
+  ) {
     const baseUrl = await this.consulService.getServiceAddress("user-service")
     if (!baseUrl) throw new Error("User service not found in Consul")
 
     const url = `${baseUrl}${path}`
     const res = await lastValueFrom(
-      this.http.request({ method, url, data, timeout: 3000 }),
+      this.http.request({ method, url, data, headers, timeout: 3000 }),
     )
     return res.data
   }

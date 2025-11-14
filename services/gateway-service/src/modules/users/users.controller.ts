@@ -2,12 +2,13 @@ import {
   Controller,
   Post,
   Body,
+  Get,
   Patch,
   Param,
   Delete,
   HttpCode,
   HttpStatus,
-  BadRequestException,
+  Headers,
 } from "@nestjs/common"
 import { UsersService } from "./users.service"
 import { ConsulService } from "../../consul/consul.service"
@@ -51,12 +52,33 @@ export class UsersController {
     }
   }
 
-  @Patch("/:id")
-  async updateUser(@Param("id") id: string, @Body() body: any) {
+  @Get("/")
+  @HttpCode(HttpStatus.OK)
+  async findUser(@Headers() headers: Record<string, string>) {
+    const res = await this.usersService.forwardToUserService(
+      "GET",
+      "/api/v1/user",
+      undefined,
+      headers,
+    )
+
+    return {
+      success: res?.success ?? true,
+      data: res?.data || null,
+      message: res?.message || "Users retrieved successfully",
+    }
+  }
+
+  @Patch("/")
+  async updateUser(
+    @Body() body: any,
+    @Headers() headers: Record<string, string>,
+  ) {
     const res = await this.usersService.forwardToUserService(
       "PATCH",
-      `/api/v1/user/${id}`,
+      `/api/v1/user`,
       body,
+      headers,
     )
 
     return {
