@@ -1,9 +1,11 @@
 import env from "@fastify/env"
+import jwt from "@fastify/jwt"
 import mysql from "@fastify/mysql"
 import swagger from "@fastify/swagger"
 import swaggerUi from "@fastify/swagger-ui"
 import Fastify from "fastify"
 
+import auth_routes from "./routes/auth.routes.js"
 import error_handler from "./lib/utils/error_handler.js"
 import user_route from "./routes/user.routes.js"
 import env_schema from "./schema/env.schema.js"
@@ -40,6 +42,11 @@ app.register(mysql, {
   connectionString: app.config.DB_URL,
 })
 
+app.register(jwt, {
+  secret: app.config.JWT_SECRET,
+})
+
+app.register(auth_routes, { prefix: "/api/v1/auth" })
 app.register(user_route, { prefix: "/api/v1/users" })
 
 app.get("/health", async (_request, reply) => {
